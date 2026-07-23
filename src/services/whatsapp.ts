@@ -2839,14 +2839,13 @@ Ketik menu yang kamu inginkan.`;
         const genAiApiKey = process.env.GEMINI_API_KEY;
         
         if (genAiApiKey && genAiApiKey.trim() !== "") {
-                        const modelsToTry = [
+                                    const modelsToTry = [
+                "gemini-flash-latest",
                 "gemini-2.5-flash",
                 "gemini-2.0-flash",
-                "gemini-1.5-flash",
-                "gemini-1.5-flash-8b",
-                "gemini-1.5-pro",
-                "gemini-pro",
-                "gemini-1.0-pro"
+                "gemini-1.5-flash-latest",
+                "gemini-pro-latest",
+                "gemini-1.5-pro-latest"
             ];
             const { GoogleGenAI } = await import("@google/genai");
             const ai = new GoogleGenAI({ apiKey: genAiApiKey });
@@ -2857,13 +2856,13 @@ Ketik menu yang kamu inginkan.`;
                     const response = await ai.models.generateContent({
                         model: modelName,
                         contents: query,
-                        // Hanya beberapa model yang support systemInstruction, tapi SDK biasanya mengabaikannya jika tidak disupport
+                        // Beberapa model lama tidak menerima config.systemInstruction, tapi @google/genai biasanya menyesuaikan
                         config: { systemInstruction: systemPrompt }
                     });
                     answer = response.text;
                     geminiError = "";
                     lastError = null;
-                    break; // Berhasil, keluar dari loop
+                    break; 
                 } catch(e) {
                     lastError = e;
                     console.error(`Gemini API error with ${modelName}:`, e.message);

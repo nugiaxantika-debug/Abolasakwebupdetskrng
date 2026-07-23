@@ -1,5 +1,5 @@
 const { gpt } = require('gpti');
-gpt.v1({
+gpt.v2({
     messages: [
         { role: "user", content: "Halo siapa kamu?" }
     ],
