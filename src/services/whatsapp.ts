@@ -2835,6 +2835,7 @@ Ketik menu yang kamu inginkan.`;
 
         
         let answer = "";
+        let geminiError = "";
         const genAiApiKey = process.env.GEMINI_API_KEY;
         
         if (genAiApiKey && genAiApiKey.trim() !== "") {
@@ -2842,13 +2843,29 @@ Ketik menu yang kamu inginkan.`;
               const { GoogleGenAI } = await import("@google/genai");
               const ai = new GoogleGenAI({ apiKey: genAiApiKey });
               const response = await ai.models.generateContent({
-                  model: "gemini-flash-latest",
+                  model: "gemini-2.5-flash",
                   contents: query,
                   config: { systemInstruction: systemPrompt }
               });
               answer = response.text;
             } catch(e) {
+                geminiError = e.message || String(e);
                 console.error("Gemini API error, falling back:", e);
+                // Coba model lama jika 2.5 gagal (kadang API key lama tidak support model terbaru)
+                try {
+                  const { GoogleGenAI } = await import("@google/genai");
+                  const ai = new GoogleGenAI({ apiKey: genAiApiKey });
+                  const response = await ai.models.generateContent({
+                      model: "gemini-1.5-flash",
+                      contents: query,
+                      config: { systemInstruction: systemPrompt }
+                  });
+                  answer = response.text;
+                  geminiError = ""; // Berhasil di fallback
+                } catch(e2) {
+                    geminiError = e2.message || String(e2);
+                    console.error("Gemini API error (fallback), giving up:", e2);
+                }
             }
         }
         
@@ -2890,7 +2907,7 @@ Ketik menu yang kamu inginkan.`;
                 if (!process.env.GEMINI_API_KEY) {
                     answer = "❌ *Gagal mendapatkan respon AI.*\n\nKarena API gratis sedang gangguan (IP diblokir), kamu *WAJIB* menambahkan `GEMINI_API_KEY` di Environment Variables Railway agar fitur AI berfungsi normal.";
                 } else {
-                    answer = "❌ Gagal mendapatkan respon dari AI. API key mungkin tidak valid atau limit habis.";
+                    answer = `❌ *Gagal mendapatkan respon AI.*\n\nAPI Key Gemini kamu terdeteksi, namun terjadi error saat menghubungi Google: _${geminiError}_` + "\n\nPastikan API Key kamu benar, masih aktif, dan memiliki kuota di Google AI Studio.";
                 }
             }
         }
