@@ -2839,33 +2839,39 @@ Ketik menu yang kamu inginkan.`;
         const genAiApiKey = process.env.GEMINI_API_KEY;
         
         if (genAiApiKey && genAiApiKey.trim() !== "") {
-            try {
-              const { GoogleGenAI } = await import("@google/genai");
-              const ai = new GoogleGenAI({ apiKey: genAiApiKey });
-              const response = await ai.models.generateContent({
-                  model: "gemini-2.5-flash",
-                  contents: query,
-                  config: { systemInstruction: systemPrompt }
-              });
-              answer = response.text;
-            } catch(e) {
-                geminiError = e.message || String(e);
-                console.error("Gemini API error, falling back:", e);
-                // Coba model lama jika 2.5 gagal (kadang API key lama tidak support model terbaru)
+                        const modelsToTry = [
+                "gemini-2.5-flash",
+                "gemini-2.0-flash",
+                "gemini-1.5-flash",
+                "gemini-1.5-flash-8b",
+                "gemini-1.5-pro",
+                "gemini-pro",
+                "gemini-1.0-pro"
+            ];
+            const { GoogleGenAI } = await import("@google/genai");
+            const ai = new GoogleGenAI({ apiKey: genAiApiKey });
+            
+            let lastError = null;
+            for (const modelName of modelsToTry) {
                 try {
-                  const { GoogleGenAI } = await import("@google/genai");
-                  const ai = new GoogleGenAI({ apiKey: genAiApiKey });
-                  const response = await ai.models.generateContent({
-                      model: "gemini-1.5-flash",
-                      contents: query,
-                      config: { systemInstruction: systemPrompt }
-                  });
-                  answer = response.text;
-                  geminiError = ""; // Berhasil di fallback
-                } catch(e2) {
-                    geminiError = e2.message || String(e2);
-                    console.error("Gemini API error (fallback), giving up:", e2);
+                    const response = await ai.models.generateContent({
+                        model: modelName,
+                        contents: query,
+                        // Hanya beberapa model yang support systemInstruction, tapi SDK biasanya mengabaikannya jika tidak disupport
+                        config: { systemInstruction: systemPrompt }
+                    });
+                    answer = response.text;
+                    geminiError = "";
+                    lastError = null;
+                    break; // Berhasil, keluar dari loop
+                } catch(e) {
+                    lastError = e;
+                    console.error(`Gemini API error with ${modelName}:`, e.message);
                 }
+            }
+            if (lastError && !answer) {
+                geminiError = lastError.message || String(lastError);
+                console.error("Gemini API completely failed. Last error:", geminiError);
             }
         }
         

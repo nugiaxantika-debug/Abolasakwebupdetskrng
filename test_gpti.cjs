@@ -1,23 +1,16 @@
-const { gpti } = require("gpti");
-
-gpti({
-    messages: [
-        {
-            role: "system",
-            content: "You are a helpful assistant."
-        },
-        {
-            role: "user",
-            content: "Hello"
-        }
-    ],
-    markdown: false,
-    stream: false,
-    model: "gpt-4"
-}, (err, data) => {
-    if(err) {
-        console.log("Error:", err);
-    } else {
-        console.log("Response:", data);
+const { gpt } = require('gpti');
+async function test() {
+    try {
+        gpt.v1({
+            messages: [{role: 'user', content: 'Halo'}],
+            prompt: 'Halo',
+            markdown: false
+        }, (err, data) => {
+            if(err != null) console.log("gpti error:", err);
+            else console.log("gpti success:", data);
+        });
+    } catch(e) {
+        console.error(e);
     }
-});
+}
+test();
