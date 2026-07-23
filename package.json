@@ -40,6 +40,7 @@
     "fg-ig": "^0.0.4",
     "firebase": "^12.13.0",
     "firebase-admin": "^13.9.0",
+    "gpti": "^2.1.8",
     "hmtai": "^3.2.3",
     "instagram-url-direct": "^2.0.7",
     "lucide-react": "^0.546.0",

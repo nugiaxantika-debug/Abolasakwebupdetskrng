@@ -1,13 +1,23 @@
-const { blackbox } = require("gpti");
-blackbox({
+const { gpti } = require("gpti");
+
+gpti({
     messages: [
-        { role: "user", content: "Hello, my name is John." }
+        {
+            role: "system",
+            content: "You are a helpful assistant."
+        },
+        {
+            role: "user",
+            content: "Hello"
+        }
     ],
-    markdown: false
+    markdown: false,
+    stream: false,
+    model: "gpt-4"
 }, (err, data) => {
-    if(err != null){
-        console.log(err);
+    if(err) {
+        console.log("Error:", err);
     } else {
-        console.log(data);
+        console.log("Response:", data);
     }
 });

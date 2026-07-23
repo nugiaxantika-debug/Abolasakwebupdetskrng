@@ -2861,35 +2861,29 @@ Ketik menu yang kamu inginkan.`;
                        { role: "user", content: query }
                    ]
                };
-               const response = await fetch('https://text.pollinations.ai/openai', {
-                   method: 'POST',
+               const response = await axios.post('https://text.pollinations.ai/openai', payload, {
                    headers: {
                       'Content-Type': 'application/json',
-                     'User-Agent': 'Mozilla/5.0'
-                   },
-                   body: JSON.stringify(payload)
-               });
-               if (response.ok) {
-                   const data = await response.json();
-                   answer = data?.choices?.[0]?.message?.content;
-                   if (!answer) {
-                      const textRes = await fetch('https://text.pollinations.ai/'+encodeURIComponent(query));
-                      if (textRes.ok) answer = await textRes.text();
+                      'User-Agent': 'Mozilla/5.0'
                    }
-               } else {
-                   const errText = await response.text();
-                   console.error("Pollinations error:", response.status, errText);
+               });
+               if (response.data && response.data.choices && response.data.choices[0] && response.data.choices[0].message) {
+                   answer = response.data.choices[0].message.content;
                }
             } catch (e) {
-               console.error("Third party AI error:", e);
+               console.error("Pollinations OpenAI error:", e.message);
             }
             
             if (!answer) {
                 try {
-                    const textRes = await fetch('https://text.pollinations.ai/'+encodeURIComponent(query));
-                    if (textRes.ok) answer = await textRes.text();
+                    const textRes = await axios.get('https://text.pollinations.ai/'+encodeURIComponent(query), {
+                        headers: { 'User-Agent': 'Mozilla/5.0' }
+                    });
+                    if (textRes.data) {
+                        answer = typeof textRes.data === 'string' ? textRes.data : JSON.stringify(textRes.data);
+                    }
                 } catch (e2) {
-                    answer = "❌ Gagal menghubungi layanan AI pihak ketiga.";
+                    console.error("Pollinations Text error:", e2.message);
                 }
             }
             if (!answer) answer = "❌ Gagal mendapatkan respon dari AI.";
