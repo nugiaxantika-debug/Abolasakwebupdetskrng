@@ -255,6 +255,11 @@ export class WhatsAppBot {
           
           if (statusCode === DisconnectReason.loggedOut) {
              shouldReconnect = false;
+          } else if (statusCode === 440) {
+             shouldReconnect = false; // Do not reconnect on conflict, but do not delete session either
+             this.broadcastState("Conflict (440): Connected from another location. Stopping reconnect loop.");
+             this.updateStatus("disconnected");
+             return;
           }
 
           // If we get Precondition Required (428) or Time Out (408) while not registered,
@@ -2884,6 +2889,7 @@ Ketik menu yang kamu inginkan.`;
                    ]
                };
                const response = await axios.post('https://text.pollinations.ai/openai', payload, {
+                   timeout: 10000,
                    headers: {
                       'Content-Type': 'application/json',
                       'User-Agent': 'Mozilla/5.0'
@@ -2899,6 +2905,7 @@ Ketik menu yang kamu inginkan.`;
             if (!answer) {
                 try {
                     const textRes = await axios.get('https://text.pollinations.ai/'+encodeURIComponent(query), {
+                        timeout: 10000,
                         headers: { 'User-Agent': 'Mozilla/5.0' }
                     });
                     if (textRes.data) {
@@ -2910,7 +2917,7 @@ Ketik menu yang kamu inginkan.`;
             }
             if (!answer) {
                 if (!process.env.GEMINI_API_KEY) {
-                    answer = "❌ *Gagal mendapatkan respon AI.*\n\nKarena API gratis sedang gangguan (IP diblokir), kamu *WAJIB* menambahkan `GEMINI_API_KEY` di Environment Variables Railway agar fitur AI berfungsi normal.";
+                    answer = "❌ *Gagal mendapatkan respon AI.*\n\nKarena sistem AI publik gratis sering diblokir, kamu *WAJIB* menambahkan `GEMINI_API_KEY` di Dashboard Railway > Variables agar fitur AI berfungsi normal.\n\n*Cara mendapatkan API Key gratis:*\n1. Buka https://aistudio.google.com/app/apikey\n2. Buat API Key baru\n3. Copy dan masukkan sebagai variable `GEMINI_API_KEY` di Railway.";
                 } else {
                     answer = `❌ *Gagal mendapatkan respon AI.*\n\nAPI Key Gemini kamu terdeteksi, namun terjadi error saat menghubungi Google: _${geminiError}_` + "\n\nPastikan API Key kamu benar, masih aktif, dan memiliki kuota di Google AI Studio.";
                 }
@@ -2952,11 +2959,27 @@ Ketik menu yang kamu inginkan.`;
              return await this.sock.sendMessage(jid, { text: "❌ *Gagal mengunduh gambar.*" }, { quoted: msg });
           }
 
-          // Use the background removal node module
-          const { removeBackground } = require('@imgly/background-removal-node');
-          const blob = new Blob([media], { type: 'image/jpeg' });
-          const resultBlob = await removeBackground(blob);
-          const buffer = Buffer.from(await resultBlob.arrayBuffer());
+          // Use remove.bg API to save memory instead of local AI model
+          const removeBgApiKey = process.env.REMOVEBG_API_KEY;
+          let buffer;
+          
+          if (!removeBgApiKey) {
+             return await this.sock.sendMessage(jid, { text: "❌ *Fitur hapusbgfoto dinonaktifkan.*\n\nKarena keterbatasan memori server (Railway), fitur ini membutuhkan *REMOVEBG_API_KEY*.\n\nCara mendapatkan:\n1. Daftar di https://www.remove.bg/api\n2. Dapatkan API Key gratis (50 foto/bulan)\n3. Tambahkan di Environment Variables Railway sebagai `REMOVEBG_API_KEY`." }, { quoted: msg });
+          }
+          
+          const FormData = require('form-data');
+          const formData = new FormData();
+          formData.append('size', 'auto');
+          formData.append('image_file', Buffer.from(media), 'image.jpg');
+          
+          const bgRes = await axios.post('https://api.remove.bg/v1.0/removebg', formData, {
+              headers: {
+                  ...formData.getHeaders(),
+                  'X-Api-Key': removeBgApiKey
+              },
+              responseType: 'arraybuffer'
+          });
+          buffer = Buffer.from(bgRes.data);
 
           await this.sock.sendMessage(jid, { image: buffer, caption: "🖼️ *Background berhasil dihapus!*" }, { quoted: msg });
           await this.sock.sendMessage(jid, { react: { text: "✅", key: msg.key } });
@@ -3374,12 +3397,12 @@ Link referensi: ${randomItem.link}` }, { quoted: msg });
                  <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
                    <rect width="100%" height="100%" fill="${bgColor}" rx="40" ry="40"/>
                    <rect x="20" y="20" width="${width-40}" height="${height-40}" fill="none" stroke="#ffffff" stroke-width="8" rx="20" ry="20" stroke-dasharray="15 10"/>
-                   <text x="50%" y="130" font-size="40" font-family="sans-serif" font-weight="bold" fill="#ffffff" text-anchor="middle">SERTIFIKAT RESMI</text>
-                   <text x="50%" y="200" font-size="28" font-family="sans-serif" fill="#e2e8f0" text-anchor="middle">Menyatakan bahwa:</text>
-                   <text x="50%" y="280" font-size="52" font-family="sans-serif" font-weight="bold" fill="#ffffff" text-anchor="middle">${safeName}</text>
-                   <text x="50%" y="360" font-size="28" font-family="sans-serif" fill="#e2e8f0" text-anchor="middle">Telah terbukti dan diakui sebagai</text>
-                   <text x="50%" y="430" font-size="24" font-family="sans-serif" fill="#e2e8f0" text-anchor="middle">orang yang sangat</text>
-                   <text x="50%" y="470" font-size="40" font-family="sans-serif" font-weight="bold" fill="#fcd34d" text-anchor="middle">${type.toUpperCase()}</text>
+                   <text x="50%" y="130" font-size="40" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" font-weight="bold" fill="#ffffff" text-anchor="middle">SERTIFIKAT RESMI</text>
+                   <text x="50%" y="200" font-size="28" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" fill="#e2e8f0" text-anchor="middle">Menyatakan bahwa:</text>
+                   <text x="50%" y="280" font-size="52" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" font-weight="bold" fill="#ffffff" text-anchor="middle">${safeName}</text>
+                   <text x="50%" y="360" font-size="28" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" fill="#e2e8f0" text-anchor="middle">Telah terbukti dan diakui sebagai</text>
+                   <text x="50%" y="430" font-size="24" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" fill="#e2e8f0" text-anchor="middle">orang yang sangat</text>
+                   <text x="50%" y="470" font-size="40" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" font-weight="bold" fill="#fcd34d" text-anchor="middle">${type.toUpperCase()}</text>
                  </svg>
                `;
                const buffer = await sharp(Buffer.from(svgImage)).webp({ quality: 80 }).toBuffer();
@@ -3568,7 +3591,7 @@ Link referensi: ${randomItem.link}` }, { quoted: msg });
            lines.forEach((line, i) => {
              // Escape HTML characters
              const safeLine = line.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-             textLinesSVG += `<text x="20" y="${30 + i*25}" font-family="sans-serif" font-size="17" fill="#111b21">${safeLine}</text>`;
+             textLinesSVG += `<text x="20" y="${30 + i*25}" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" font-size="17" fill="#111b21">${safeLine}</text>`;
            });
            
            const now = new Date();
@@ -3597,13 +3620,13 @@ Link referensi: ${randomItem.link}` }, { quoted: msg });
   <rect x="30" y="${bubbleY}" width="${bubbleWidth}" height="${bubbleHeight}" rx="12" fill="#ffffff" filter="url(#shadow)" />
   <g transform="translate(30, ${bubbleY})">
     ${textLinesSVG}
-    <text x="${bubbleWidth - 50}" y="${bubbleHeight - 12}" font-family="sans-serif" font-size="12" fill="#667781">${timeStr}</text>
+    <text x="${bubbleWidth - 50}" y="${bubbleHeight - 12}" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" font-size="12" fill="#667781">${timeStr}</text>
   </g>
 
   <!-- Context Menu -->
   <rect x="30" y="${menuY}" width="${bubbleWidth}" height="${menuHeight}" rx="14" fill="#ffffff" filter="url(#shadow)" />
   
-  <g transform="translate(30, ${menuY})" font-family="sans-serif" font-size="17" fill="#111b21">
+  <g transform="translate(30, ${menuY})" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" font-size="17" fill="#111b21">
     <!-- Balas -->
     <text x="20" y="35">Balas</text>
     <path transform="translate(260, 15) scale(1.2)" d="M10,4 L4,10 L10,16 M4,10 L18,10 C21.3137,10 24,12.6863 24,16 C24,19.3137 21.3137,22 18,22 H14" stroke="#54656f" stroke-width="1.5" fill="none" />
@@ -3641,7 +3664,7 @@ Link referensi: ${randomItem.link}` }, { quoted: msg });
   </g>
 
   <!-- Watermark -->
-  <text x="30" y="${menuY + menuHeight + 35}" font-family="sans-serif" font-size="14" fill="#667781">${watermark}</text>
+  <text x="30" y="${menuY + menuHeight + 35}" font-family="Ubuntu, Noto Sans, DejaVu Sans, sans-serif" font-size="14" fill="#667781">${watermark}</text>
 </svg>`;
 
            const finalBuffer = await sharp(Buffer.from(svg)).png().toBuffer();

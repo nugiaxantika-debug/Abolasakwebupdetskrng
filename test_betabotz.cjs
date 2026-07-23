@@ -1,2 +1,6 @@
-const betabotz = require('betabotz-tools');
-console.log(Object.keys(betabotz));
+const { openai } = require('betabotz-tools');
+async function run() {
+    const res = await openai("halo");
+    console.log(res);
+}
+run();

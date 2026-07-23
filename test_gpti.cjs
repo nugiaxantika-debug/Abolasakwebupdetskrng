@@ -1,13 +1,8 @@
 const { gpt } = require('gpti');
 gpt.v1({
-    messages: [
-        { role: "user", content: "Halo siapa kamu?" }
-    ],
-    markdown: false
+    messages: [{ role: "user", content: "Halo" }],
+    markdown: false,
+    model: "GPT-4"
 }, (err, data) => {
-    if(err) {
-        console.error("error:", err);
-    } else {
-        console.log("success:", data);
-    }
+    console.log(err, data);
 });

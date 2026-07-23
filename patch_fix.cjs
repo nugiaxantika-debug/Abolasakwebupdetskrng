@@ -1,15 +1,26 @@
 const fs = require('fs');
-let content = fs.readFileSync('src/services/whatsapp.ts', 'utf8');
+let code = fs.readFileSync('/app/applet/src/services/whatsapp.ts', 'utf8');
 
-content = content.replace(
-  "const sticker = new Sticker(bgBuffer, { pack: 'ATTP', author: 'Bot', type: 'full' });",
-  "const pngBuffer = await sharp(bgBuffer).png().toBuffer();\n                 const sticker = new Sticker(pngBuffer, { pack: 'ATTP', author: 'Bot', type: 'full' });"
+code = code.replace(
+`          if (statusCode === DisconnectReason.loggedOut) {
+             shouldReconnect = false;
+          } else if (statusCode === 440) {
+             shouldReconnect = false; // Do not reconnect on conflict, but do not delete session either
+             this.broadcastState("Conflict (440): Connected from another location. Stopping reconnect loop.");
+             this.updateStatus("disconnected");
+             return;
+          }
+             shouldReconnect = false;
+          }`,
+`          if (statusCode === DisconnectReason.loggedOut) {
+             shouldReconnect = false;
+          } else if (statusCode === 440) {
+             shouldReconnect = false; // Do not reconnect on conflict, but do not delete session either
+             this.broadcastState("Conflict (440): Connected from another location. Stopping reconnect loop.");
+             this.updateStatus("disconnected");
+             return;
+          }`
 );
 
-content = content.replace(
-  "const searchQuery = targetQuery.replace(\"tiktok\", \"\");",
-  "let searchQuery = targetQuery.replace(\"tiktok\", \"\");\n      if (targetQuery === \"videosexybikini\") searchQuery = \"bikini haul\";"
-);
-
-fs.writeFileSync('src/services/whatsapp.ts', content);
-console.log("Patched.");
+fs.writeFileSync('/app/applet/src/services/whatsapp.ts', code);
+console.log("Patched successfully!");
