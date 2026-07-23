@@ -2886,7 +2886,13 @@ Ketik menu yang kamu inginkan.`;
                     console.error("Pollinations Text error:", e2.message);
                 }
             }
-            if (!answer) answer = "❌ Gagal mendapatkan respon dari AI.";
+            if (!answer) {
+                if (!process.env.GEMINI_API_KEY) {
+                    answer = "❌ *Gagal mendapatkan respon AI.*\n\nKarena API gratis sedang gangguan (IP diblokir), kamu *WAJIB* menambahkan `GEMINI_API_KEY` di Environment Variables Railway agar fitur AI berfungsi normal.";
+                } else {
+                    answer = "❌ Gagal mendapatkan respon dari AI. API key mungkin tidak valid atau limit habis.";
+                }
+            }
         }
 
         if (answer) {
